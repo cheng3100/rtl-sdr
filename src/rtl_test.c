@@ -255,6 +255,52 @@ static void rtlsdr_callback(unsigned char *buf, uint32_t len, void *ctx)
 		ppm_test(len);
 }
 
+void fc0012_benchmark(void)
+{
+	uint32_t freq, gap_start = 0, gap_end = 0;
+	uint32_t range_start = 0, range_end = 0;
+
+	fprintf(stderr, "Benchmarking E4000 PLL...\n");
+
+	/* find tuner range start */
+	for (freq = MHZ(30); freq > MHZ(1); freq -= MHZ(1)) {
+		if (rtlsdr_set_center_freq(dev, freq) < 0) {
+			range_start = freq;
+			break;
+		}
+	}
+
+	/* find tuner range end */
+	for (freq = MHZ(930); freq < MHZ(970); freq += MHZ(1)) {
+		if (rtlsdr_set_center_freq(dev, freq) < 0) {
+			range_end = freq;
+			break;
+		}
+	}
+
+	/* find start of L-band gap */
+	/** for (freq = MHZ(1000); freq < MHZ(1300); freq += MHZ(1)) { */
+	/**     if (rtlsdr_set_center_freq(dev, freq) < 0) { */
+	/**         gap_start = freq; */
+	/**         break; */
+	/**     } */
+	/** } */
+    /**  */
+	/* find end of L-band gap */
+	/** for (freq = MHZ(1300); freq > MHZ(1000); freq -= MHZ(1)) { */
+	/**     if (rtlsdr_set_center_freq(dev, freq) < 0) { */
+	/**         gap_end = freq; */
+	/**         break; */
+	/**     } */
+	/** } */
+
+	fprintf(stderr, "fc0012 range: %i to %i MHz\n",
+		range_start/MHZ(1) + 1, range_end/MHZ(1) - 1);
+
+	/** fprintf(stderr, "E4K L-band gap: %i to %i MHz\n", */
+	/**     gap_start/MHZ(1), gap_end/MHZ(1)); */
+}
+
 void e4k_benchmark(void)
 {
 	uint32_t freq, gap_start = 0, gap_end = 0;
@@ -394,8 +440,11 @@ int main(int argc, char **argv)
 	verbose_set_sample_rate(dev, samp_rate);
 
 	if (test_mode == TUNER_BENCHMARK) {
-		if (rtlsdr_get_tuner_type(dev) == RTLSDR_TUNER_E4000)
+		enum rtlsdr_tuner type = rtlsdr_get_tuner_type(dev);
+		if (type == RTLSDR_TUNER_E4000)
 			e4k_benchmark();
+		else if (type == RTLSDR_TUNER_FC0012)
+			fc0012_benchmark();
 		else
 			fprintf(stderr, "No E4000 tuner found, aborting.\n");
 
